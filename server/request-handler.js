@@ -13,6 +13,8 @@ this file and include it in basic-server.js so that it actually works.
 **************************************************************/
 
 var url = require('url');
+var fs = require('fs');
+// var http = require('http');
 
 var data = {};
 data.results = [];
@@ -46,18 +48,15 @@ var requestHandler = function(request, response) {
   var statusCode = 200;
   var headers = defaultCorsHeaders;
   
-  var validEndpoints = ['/classes/messages', '/classes/room'];
-  // if (validEndpoints.indexOf(url.parse(request.url).) === -1) {
-  if (!request.url.includes(validEndpoints[0]) && !request.url.includes(validEndpoints[1])) {
-    statusCode = 404;
-    response.writeHead(statusCode, headers);
-    response.end(JSON.stringify(data));
-  }
+  // var validEndpoints = ['/classes/messages', '/classes/room', '/'];
+  var pathname = url.parse(request.url, true).pathname;
+
+  console.log('path:', pathname);
+
+
 
   // See the note below about CORS headers.
 
-  // Tell the client we are sending them plain text.
-  //
   // You will need to change this if you are sending something
   // other than plain text, like JSON or HTML.
   headers['Content-Type'] = 'application/json';
@@ -81,25 +80,53 @@ var requestHandler = function(request, response) {
     });
     statusCode = 201;
   } else if (request.method === 'GET') {
+    var loadFile = function (path, contentType) {
+      fs.readFile(__dirname + '/../client' + path, function(err, readData) {
+        if (err) {
+          throw err;
+        }
+        response.writeHead(statusCode, {'Content-Type': contentType});
+        response.end(readData.toString());
+      });
+    };
     //could have a filterBy property (filter by room, username)
-    
-    var query = url.parse(request.url, true).query;
-    if (query.order) {
-      var newData = {results: data.results.slice(0)};
-      var key = query.order;
-      if (query.order[0] === '-') {
-        key = key.split('').slice(1).join('');
-        newData.results.sort(function(a, b) {
-          return a[key] - b[key];
-        });
-      } else {
-        newData.results.sort(function(a, b) {
-          return b[key] - a[key];
-        });
+    if (pathname === '/') {
+      // if pathname exists, load file
+      loadFile('/client/index.html', 'text/html');
+    } else if (pathname === '/styles/styles.css') {
+      loadFile('/client' + pathname, 'text/css');
+    } else if (pathname === '/bower_components/jquery/dist/jquery.js') {
+      loadFile(pathname, 'application/javascript');
+    } else if (pathname === '/scripts/app.js') {
+      loadFile('/client' + pathname, 'application/javascript');
+    } else if (pathname === '/images/spiffygif_46x46.gif') {
+      // loadFile('/client' + pathname, 'image/gif');
+      fs.readFile(__dirname + '/../client/client/images/spiffygif_46x46.gif', function(err, readData) {
+        if (err) {
+          throw err;
+        }
+        response.writeHead(statusCode, {'Content-Type': 'image/gif'});
+        response.end(readData);
+      });
+    } else {
+      var query = url.parse(request.url, true).query;
+      if (query.order) {
+        var newData = {results: data.results.slice(0)};
+        var key = query.order;
+        if (query.order[0] === '-') {
+          key = key.split('').slice(1).join('');
+          newData.results.sort(function(a, b) {
+            return a[key] - b[key];
+          });
+        } else {
+          newData.results.sort(function(a, b) {
+            return b[key] - a[key];
+          });
+        }
+        
+        response.writeHead(statusCode, headers);
+        response.end(JSON.stringify(newData));
       }
-      
-      response.writeHead(statusCode, headers);
-      response.end(JSON.stringify(newData));
     }
   } else if (request.method === 'PUT') {
     // find the message by id
@@ -114,6 +141,10 @@ var requestHandler = function(request, response) {
     //add detailed parameters for all the method ypes
     response.writeHead(statusCode, headers);
     response.end(JSON.stringify(headers));
+  } else {
+    statusCode = 404;
+    response.writeHead(statusCode, headers);
+    response.end(JSON.stringify(data));
   }
   
   // Make sure to always call response.end() - Node may not send
@@ -124,8 +155,6 @@ var requestHandler = function(request, response) {
   // Calling .end "flushes" the response's internal buffer, forcing
   // node to actually send all the data over to the client.
 
-  response.writeHead(statusCode, headers);
-  response.end(JSON.stringify(data));
 };
 
 // These headers will allow Cross-Origin Resource Sharing (CORS).
@@ -141,5 +170,4 @@ var requestHandler = function(request, response) {
 
 exports.requestHandler = requestHandler;
 exports.defaultCorsHeaders = defaultCorsHeaders;
-// exports.data = data;
 

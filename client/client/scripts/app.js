@@ -222,7 +222,7 @@ var app = {
     };
 
     app.send(JSON.stringify(message));
-
+    app.$message.val('');
     // Stop the form from submitting
     event.preventDefault();
   },
