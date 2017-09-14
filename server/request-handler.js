@@ -16,8 +16,20 @@ var url = require('url');
 var fs = require('fs');
 // var http = require('http');
 
+var file = 'test.json';
+
 var data = {};
 data.results = [];
+
+fs.readFile(file, 'utf8', (err, dataFromFile) => {
+  if (err) {
+    throw err;
+  }
+  console.log('Loaded data');
+  data = JSON.parse(dataFromFile);
+  // writeToContainer(JSON.parse(data), message);
+});
+
 
 // var exports = module.exports = {};
 var defaultCorsHeaders = {
@@ -28,6 +40,7 @@ var defaultCorsHeaders = {
 };
 
 var requestHandler = function(request, response) {
+  console.log('Request Handler loaded');
   // Request and Response come from node's http module.
   //
   // They include information about both the incoming request, such as
@@ -67,6 +80,29 @@ var requestHandler = function(request, response) {
 
   //GET, POST, PUT, DELETE, OPTIONS
   if (request.method === 'POST') {
+    
+    var saveToFile = (message) => {
+      var writeToContainer = function(loadedData, message) {
+        loadedData.results.push(message);
+        fs.open(file, 'w+', (err, fd) => {
+          if (err) {
+            throw err;
+          } else {
+            console.log('Supposedly opened');
+            fs.write(fd, JSON.stringify(loadedData));
+          }
+        });
+        
+      };
+
+      fs.readFile(file, 'utf8', (err, loadedData) => {
+        if (err) {
+          throw err;
+        }
+        writeToContainer(JSON.parse(loadedData), message);
+      });
+    };
+    
     let body = '';
     request.on('data', (chunk) => {
       body += chunk;
@@ -77,6 +113,7 @@ var requestHandler = function(request, response) {
       body.objectId = Date.now();
       body.createdAt = Date.now();
       data.results = data.results.concat(body);
+      saveToFile(body);
     });
     statusCode = 201;
   } else if (request.method === 'GET') {
@@ -91,7 +128,6 @@ var requestHandler = function(request, response) {
     };
     //could have a filterBy property (filter by room, username)
     if (pathname === '/') {
-      // if pathname exists, load file
       loadFile('/client/index.html', 'text/html');
     } else if (pathname === '/styles/styles.css') {
       loadFile('/client' + pathname, 'text/css');
@@ -100,7 +136,6 @@ var requestHandler = function(request, response) {
     } else if (pathname === '/scripts/app.js') {
       loadFile('/client' + pathname, 'application/javascript');
     } else if (pathname === '/images/spiffygif_46x46.gif') {
-      // loadFile('/client' + pathname, 'image/gif');
       fs.readFile(__dirname + '/../client/client/images/spiffygif_46x46.gif', function(err, readData) {
         if (err) {
           throw err;
@@ -138,7 +173,6 @@ var requestHandler = function(request, response) {
     // requires id parameter
     // splice it from data.results
   } else if (request.method === 'OPTIONS') {
-    //add detailed parameters for all the method ypes
     response.writeHead(statusCode, headers);
     response.end(JSON.stringify(headers));
   } else {
