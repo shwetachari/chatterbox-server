@@ -48,11 +48,11 @@ var requestHandler = function(request, response) {
   
   var validEndpoints = ['/classes/messages', '/classes/room'];
   // if (validEndpoints.indexOf(url.parse(request.url).) === -1) {
-  // if (request.url.includes(validEndpoints[0]) || request.url.includes(validEndpoints[1])) {
-  //   statusCode = 404;
-  //   response.writeHead(statusCode, headers);
-  //   response.end(JSON.stringify(data));
-  // }
+  if (!request.url.includes(validEndpoints[0]) && !request.url.includes(validEndpoints[1])) {
+    statusCode = 404;
+    response.writeHead(statusCode, headers);
+    response.end(JSON.stringify(data));
+  }
 
   // See the note below about CORS headers.
 
@@ -65,7 +65,6 @@ var requestHandler = function(request, response) {
   // .writeHead() writes to the request line and headers of the response,
   // which includes the status and all headers.
   
-  var query = url.parse(request.url, true).query;
 
   //GET, POST, PUT, DELETE, OPTIONS
   if (request.method === 'POST') {
@@ -78,18 +77,43 @@ var requestHandler = function(request, response) {
       body = JSON.parse(body);
       body.objectId = Date.now();
       body.createdAt = Date.now();
-      console.log(body.objectId);
       data.results = data.results.concat(body);
     });
     statusCode = 201;
   } else if (request.method === 'GET') {
+    //could have a filterBy property (filter by room, username)
     
+    var query = url.parse(request.url, true).query;
+    if (query.order) {
+      var newData = {results: data.results.slice(0)};
+      var key = query.order;
+      if (query.order[0] === '-') {
+        key = key.split('').slice(1).join('');
+        newData.results.sort(function(a, b) {
+          return a[key] - b[key];
+        });
+      } else {
+        newData.results.sort(function(a, b) {
+          return b[key] - a[key];
+        });
+      }
+      
+      response.writeHead(statusCode, headers);
+      response.end(JSON.stringify(newData));
+    }
   } else if (request.method === 'PUT') {
-    
+    // find the message by id
+      // if it doesn't exist, create new object and append it to data.results
+    // requires id parameter, property(either message or username)
+    // modify whatever property
   } else if (request.method === 'DELETE') {
-    
+    // find the message by id
+    // requires id parameter
+    // splice it from data.results
   } else if (request.method === 'OPTIONS') {
-    
+    //add detailed parameters for all the method ypes
+    response.writeHead(statusCode, headers);
+    response.end(JSON.stringify(headers));
   }
   
   // Make sure to always call response.end() - Node may not send

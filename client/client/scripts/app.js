@@ -64,7 +64,10 @@ var app = {
       contentType: 'application/json',
       success: function(data) {
         // Don't bother if we have nothing to work with
-        if (!data.results || !data.results.length) { return; }
+        if (!data.results || !data.results.length) { 
+          app.stopSpinner();
+          return;
+        }
 
         // Store messages for caching later
         app.messages = data.results;
@@ -218,7 +221,7 @@ var app = {
       roomname: app.roomname || 'lobby'
     };
 
-    app.send(message);
+    app.send(JSON.stringify(message));
 
     // Stop the form from submitting
     event.preventDefault();

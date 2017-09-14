@@ -72,6 +72,59 @@ describe('server', function() {
       done();
     });
   });
+  
+  it('Should reverse order of createdAt in GET request when option requests it', function(done) {
+    var requestParams1 = {method: 'POST',
+      uri: 'http://127.0.0.1:3000/classes/messages',
+      json: {
+        username: 'FirstPoster',
+        message: 'First!'}
+    };
+    var requestParams2 = {method: 'POST',
+      uri: 'http://127.0.0.1:3000/classes/messages',
+      json: {
+        username: 'SecondPoster',
+        message: 'First! edit:nm'}
+    };
+    
+    request(requestParams1, function(error, response, body) {
+      request(requestParams2, function(error, response, body) {
+        request('http://127.0.0.1:3000/classes/messages?order=createdAt', function(error, response, body) {
+          var messages = JSON.parse(body).results;
+          expect(messages[0].username).to.equal('SecondPoster');
+          expect(messages[0].message).to.equal('First! edit:nm');
+          expect(messages[1].username).to.equal('FirstPoster');
+          expect(messages[1].message).to.equal('First!');
+          done();
+        });
+      });
+    });
+  });
+  
+  it('Should get server headers when request type is OPTIONS', function(done) {
+    var requestParams = {
+      method: 'OPTIONS',
+      uri: 'http://127.0.0.1:3000/classes/messages'
+    };
+    
+    request(requestParams, function(error, response, body) {
+      var returnedOptions = JSON.parse(body);
+      expect(returnedOptions['access-control-allow-headers']).to.not.equal(undefined);
+      expect(returnedOptions['access-control-allow-methods']).to.not.equal(undefined);
+      expect(returnedOptions['access-control-allow-origin']).to.not.equal(undefined);
+      expect(returnedOptions['access-control-max-age']).to.not.equal(undefined);
+
+      done();
+    });
+  });
+  
+  it('Should have unique object ids for all message objects', function(done) {
+    request('http://127.0.0.1:3000/classes/messages?order=createdAt', function(error, response, body) {
+      var messages = JSON.parse(body).results;
+      expect(messages[0].objectId).to.not.equal(messages[1].objectId);
+      done();
+    });
+  });
 
 
 });
